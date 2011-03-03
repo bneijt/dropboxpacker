@@ -19,9 +19,11 @@ text-decoration: underline;
 </head>
 <body>
 <h1>Files</h1>
+<ul>
 <% for filename in @files %>
-<a href="<%=filename %>"><%=filename %></a>
+<li><a href="<%=filename %>"><%=filename %></a></li>
 <% end %>
+</ul>
 </body>
 </html>
 
