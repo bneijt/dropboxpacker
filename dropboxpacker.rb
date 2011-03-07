@@ -1,22 +1,13 @@
 #!/usr/bin/ruby
 require 'find'
 require 'etc'
-
+require 'inotify'
 
 HOSTPATH=File.join(Etc.getpwuid.dir, 'Videos')
 DROPPATH=File.join(Etc.getpwuid.dir, 'Dropbox', 'dropboxpacker')
 LISTFILE=File.join(DROPPATH, 'list.txt')
 MAX_SIZE=1524*1024*1024 #1.5GB
 
-def update()
-    currentLinks = Dir.glob(DROPPATH)
-    
-    #Get the filelist
-    # Link as much files from the top of the list as possible (size permits)
-    # Unlink any file not in that list
-    # Append any new files you can find to the list, if needed write
-    # Done!
-end
 
 #Load and update the list of files
 def loadListFile()
@@ -61,7 +52,17 @@ def main(args)
     puts "Dropbox path: #{DROPPATH}"
     puts "Host path:    #{HOSTPATH}"
     puts "List file:    #{LISTFILE}"
-        
+    iNotify = Inotify.new
+    iNotify.add_watch(LISTFILE, Inotify::MODIFY)
+    iNotify.each_event do |event|
+        puts "EVENT"
+        update()
+        puts "Waiting for next"
+    end
+    return 0
+end
+
+def update()    
     files = loadListFile()
     puts "Loaded #{files.size} files"
     #See if the file is symlinked, if not, symlink it. Keep the size below MAX_SIZE
