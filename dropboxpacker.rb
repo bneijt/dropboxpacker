@@ -1,10 +1,12 @@
 #!/usr/bin/ruby
 require 'find'
+require 'etc'
 
-HOSTPATH='/tmp/banaan'
-DROPPATH='/tmp/dropped'
+
+HOSTPATH=File.join(Etc.getpwuid.dir, 'Videos')
+DROPPATH=File.join(Etc.getpwuid.dir, 'Dropbox', 'dropboxpacker')
 LISTFILE=File.join(DROPPATH, 'list.txt')
-MAX_SIZE=1024*1024*1024 #1GB
+MAX_SIZE=1524*1024*1024 #1.5GB
 
 def update()
     currentLinks = Dir.glob(DROPPATH)
@@ -46,30 +48,38 @@ def main(args)
         list = File.new(LISTFILE, 'w')
         Find.find(HOSTPATH) do |filename|
             if File.file?(filename)
+                if not filename.start_with?(HOSTPATH)
+                    throw Exception("Found file without propper base path??\n\t#{filename}")
+                end
                 list.write("#{filename[HOSTPATH.size + 1..-1]}\n")
             end
         end
+        list.flush()
+        list.close()
     end
     
-    
+    puts "Dropbox path: #{DROPPATH}"
+    puts "Host path:    #{HOSTPATH}"
+    puts "List file:    #{LISTFILE}"
+        
     files = loadListFile()
     puts "Loaded #{files.size} files"
     #See if the file is symlinked, if not, symlink it. Keep the size below MAX_SIZE
     totalSize = 0
     candidates = []
     for file in files
-        if not File.exists?(File.join(HOSTPATH, file[:filename]))
+        file[:hostLocation] = File.join(HOSTPATH, file[:filename])
+        if not File.exists?(file[:hostLocation])
             puts "STALE File mentioned in list, but not in host path\n\t#{file[:filename]}"
             next
         end
-        file[:size] = File.size(File.join(HOSTPATH, file[:filename]))
+        file[:size] = File.size(file[:hostLocation])
         totalSize += file[:size]
         if totalSize > MAX_SIZE
             break
         end
         
         file[:dropLocation] = File.join(DROPPATH, File.basename(file[:filename]))
-        file[:hostLocation] = File.join(HOSTPATH, File.basename(file[:filename]))
         candidates.push(file)
     end
     
