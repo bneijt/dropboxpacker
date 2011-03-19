@@ -11,7 +11,7 @@ HOSTPATH=File.join(Etc.getpwuid.dir, 'Videos')
 DROPPATH=File.join(Etc.getpwuid.dir, 'Dropbox', 'dropboxpacker')
 LISTFILE=File.join(DROPPATH, 'list.txt')
 MAX_SIZE=Integer(1.5 * 1024 * 1024 * 1024) #1.5GB
-
+PROGRAM_VERSION='0.0.1'
 
 #Load and update the list of files
 def loadListFile()
@@ -34,6 +34,10 @@ def main(args)
     optparse = OptionParser.new do|opts|
         opts.on( '-d', '--daemonize', 'Daemonize after startup' ) do
             options[:daemonize] = true
+        end
+        opts.on( '-V', '--version', 'Show version and exit' ) do
+            puts "dropboxpacker version #{VERSION}"
+            return 0
         end
     end
     optparse.parse!
