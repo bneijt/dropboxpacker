@@ -4,6 +4,7 @@ require 'etc'
 require 'inotify'
 require 'syslog'
 require 'daemons'
+require 'optparse'
 
 LOG=Syslog.open()
 HOSTPATH=File.join(Etc.getpwuid.dir, 'Videos')
@@ -29,6 +30,14 @@ end
 #Load file list
 #Load files already symlinked
 def main(args)
+    options = {}
+    optparse = OptionParser.new do|opts|
+        opts.on( '-d', '--daemonize', 'Daemonize after startup' ) do
+            options[:daemonize] = true
+        end
+    end
+    optparse.parse!
+    
     #If the appropriate directories do not exist, create them
     if not File.exists?(DROPPATH)
         Dir.mkdir(DROPPATH)
@@ -55,10 +64,16 @@ def main(args)
     puts "Dropbox path: #{DROPPATH}"
     puts "Host path:    #{HOSTPATH}"
     puts "List file:    #{LISTFILE}"
-    Daemons.daemonize
+    
+    if options[:daemonize]
+        Daemons.daemonize    
+    end
     iNotify = Inotify.new
     iNotify.add_watch(LISTFILE, Inotify::MODIFY | Inotify::CLOSE)
     iNotify.each_event do |event|
+        if not File.exists?(LISTFILE)
+            break
+        end
         update()
     end
     
