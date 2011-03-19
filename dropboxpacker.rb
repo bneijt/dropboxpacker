@@ -2,11 +2,13 @@
 require 'find'
 require 'etc'
 require 'inotify'
+require 'syslog'
 
+LOG=Syslog.open()
 HOSTPATH=File.join(Etc.getpwuid.dir, 'Videos')
 DROPPATH=File.join(Etc.getpwuid.dir, 'Dropbox', 'dropboxpacker')
 LISTFILE=File.join(DROPPATH, 'list.txt')
-MAX_SIZE=1524*1024*1024 #1.5GB
+MAX_SIZE=Integer(1.5 * 1024 * 1024 * 1024) #1.5GB
 
 
 #Load and update the list of files
@@ -15,7 +17,7 @@ def loadListFile()
     for line in File.new(LISTFILE)
         #A small piece of security
         if line.start_with?(" ") or line.start_with?("/") or line.start_with?(".")
-            puts "Skipping line: #{line}"
+            LOG.warning("Skipping line: #{line}")
             next
         end
         file = {:filename => line.strip()}
@@ -35,7 +37,7 @@ def main(args)
         return 1
     end
     if not File.exists?(LISTFILE)
-        puts "No list file found, generating"
+        LOG.warning("No list file found, generating")
         list = File.new(LISTFILE, 'w')
         Find.find(HOSTPATH) do |filename|
             if File.file?(filename)
@@ -53,10 +55,11 @@ def main(args)
     puts "Host path:    #{HOSTPATH}"
     puts "List file:    #{LISTFILE}"
     iNotify = Inotify.new
-    iNotify.add_watch(LISTFILE, Inotify::MODIFY)
+    iNotify.add_watch(LISTFILE, Inotify::ALL_EVENTS)#Inotify::CLOSE_WRITE 
     iNotify.each_event do |event|
         puts "EVENT"
-        update()
+        puts event
+        #update()
         puts "Waiting for next"
     end
     return 0
