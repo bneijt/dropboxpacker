@@ -3,6 +3,7 @@ require 'find'
 require 'etc'
 require 'inotify'
 require 'syslog'
+require 'daemons'
 
 LOG=Syslog.open()
 HOSTPATH=File.join(Etc.getpwuid.dir, 'Videos')
@@ -54,27 +55,26 @@ def main(args)
     puts "Dropbox path: #{DROPPATH}"
     puts "Host path:    #{HOSTPATH}"
     puts "List file:    #{LISTFILE}"
+    Daemons.daemonize
     iNotify = Inotify.new
-    iNotify.add_watch(LISTFILE, Inotify::ALL_EVENTS)#Inotify::CLOSE_WRITE 
+    iNotify.add_watch(LISTFILE, Inotify::MODIFY | Inotify::CLOSE)
     iNotify.each_event do |event|
-        puts "EVENT"
-        puts event
-        #update()
-        puts "Waiting for next"
+        update()
     end
+    
     return 0
 end
 
 def update()    
     files = loadListFile()
-    puts "Loaded #{files.size} files"
+    LOG.info("Loaded #{files.size} files")
     #See if the file is symlinked, if not, symlink it. Keep the size below MAX_SIZE
     totalSize = 0
     candidates = []
     for file in files
         file[:hostLocation] = File.join(HOSTPATH, file[:filename])
         if not File.exists?(file[:hostLocation])
-            puts "STALE File mentioned in list, but not in host path\n\t#{file[:filename]}"
+            LOG.info("STALE File mentioned in list, but not in host path\n\t#{file[:filename]}")
             next
         end
         file[:size] = File.size(file[:hostLocation])
@@ -87,7 +87,7 @@ def update()
         candidates.push(file)
     end
     
-    puts "Found #{candidates.size} symlink candidates"
+    LOG.info("Found #{candidates.size} symlink candidates")
     #Remove symlinks that need to be removed
     basenames = candidates.collect {|i| File.basename(i[:filename])}
     
@@ -110,7 +110,7 @@ def update()
     #Symlink rest
     for candidate in candidates
         if File.exists?(candidate[:dropLocation])
-            puts "Already available file #{candidate[:filename]}"
+            LOG.info("Already available file #{candidate[:filename]}")
             next
         end
         #Symlink... finally
