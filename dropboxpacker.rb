@@ -16,7 +16,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 require 'find'
 require 'etc'
-require 'inotify'
+require 'rb-inotify'
 require 'syslog'
 require 'daemons'
 require 'optparse'
@@ -87,15 +87,21 @@ def main(args)
     if options[:daemonize]
         Daemons.daemonize    
     end
-    iNotify = Inotify.new
-    iNotify.add_watch(LISTFILE, Inotify::MODIFY | Inotify::CLOSE)
-    iNotify.each_event do |event|
-        if not File.exists?(LISTFILE)
-            break
+    while File.exists? LISTFILE do
+        notifier = INotify::Notifier.new
+        notifier.watch(LISTFILE, :modify, :close_write, :delete_self, :move_self) do |event|
+            if event.flags.include? :delete_self or event.flags.include? :ignored or event.flags.include? :move_self
+                LOG.info("Stopping inotify listener, handle lost")
+                event.notifier.stop
+            else
+                update()
+            end
         end
-        update()
+        LOG.info("Starting inotify listener")
+        notifier.run
+        notifier = nil
+        sleep 5
     end
-    
     return 0
 end
 
