@@ -26,7 +26,7 @@ HOSTPATH=File.join(Etc.getpwuid.dir, 'Videos')
 DROPPATH=File.join(Etc.getpwuid.dir, 'Dropbox', 'dropboxpacker')
 LISTFILE=File.join(DROPPATH, 'list.txt')
 MAX_SIZE=Integer(1.5 * 1024 * 1024 * 1024) #1.5GB
-PROGRAM_VERSION='0.0.2'
+PROGRAM_VERSION='0.0.3'
 
 #Load and update the list of files
 def loadListFile()
@@ -83,7 +83,7 @@ def main(args)
     puts "Dropbox path: #{DROPPATH}"
     puts "Host path:    #{HOSTPATH}"
     puts "List file:    #{LISTFILE}"
-    
+    update()
     if options[:daemonize]
         Daemons.daemonize    
     end
